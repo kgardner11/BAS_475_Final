@@ -66,11 +66,9 @@ ui <- dashboardPage(
       tabItem(tabName="c3",
               h1("Nutrition Information"),
               selectInput("hotcold",("Do you want a hot or cold drink?"),
-                          choices= c("","Hot","Tea"),
+                          choices= c("","Hot","Cold"),
                           selected = ""),
-              selectInput("coffeeno",("Do you want coffee, tea, or other?"),
-                          choices= c("","Coffee","Tea","Other"),
-                          selected = "")
+              uiOutput("coffeeno")
     )
   )
 )
@@ -192,6 +190,18 @@ server <- function(input, output) {
       paste("These three simple models are used mostly as a benchmark for more advanced forecasting. The mean model forecasts all future values to be equal to", "the average of the historical data. The naive model forecasts all future values to be equal to the most recent observed value. The seasonal naive", "mode forecasts all future values to follow the exact same seasonal pattern as the most reason season. While one may argue that it is unecessary", "to even look at these models since they are unlikely to be true to the future, it is important to understand that they still hold importance…", "After all, all models are wrong, but some are useful!",sep="\n")
     }
   })
+  
+  cofno <- reactive({
+    switch(input$hotcold,
+           "Hot" = c("Coffee","Tea","Hot Chocolate"),
+           "Cold" = c("Iced Coffee","Frappuccino","Tea","Energy Drink","Refresher","Water")
+    )
+  })
+    
+    output$coffeeno <- renderUI({
+      selectInput("cn","Choose which type of drink you want (coffee or not):",cofno())
+    })
+
   
 }
 
