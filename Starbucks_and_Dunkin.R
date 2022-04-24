@@ -66,7 +66,7 @@ ui <- dashboardPage(
       tabItem(tabName="c3",
               h1("Nutrition Information"),
               selectInput("hotcold",("Do you want a hot or cold drink?"),
-                          choices= c("","Hot","Cold"),
+                          choices= c("","Hot","Cold","Frozen"),
                           selected = ""),
               uiOutput("coffeeno")
     )
@@ -191,15 +191,34 @@ server <- function(input, output) {
     }
   })
   
-  cofno <- reactive({
+  cofnos <- reactive({
+    switch(input$hotcold,
+           "Hot" = c("Coffee","Tea","Hot Chocolate","Juice","Steamer"),
+           "Cold" = c("Coffee","Tea","Refresher","Juice","Milk","Water"),
+           "Frozen" = c("Frappuccino")
+    )})
+  
+  cofnod <- reactive({
     switch(input$hotcold,
            "Hot" = c("Coffee","Tea","Hot Chocolate"),
-           "Cold" = c("Iced Coffee","Frappuccino","Tea","Energy Drink","Refresher","Water")
-    )
+           "Cold" = c("Coffee","Tea","Coconut Refresher","Refresher","Energy Punch"),
+           "Frozen" = c("Frozen Chocolate","Frozen Coffee","Frozen Specialty","Coolata"))
+  })
+  
+  cofnoo <- reactive({
+    switch(input$hotcold,
+           "Hot" = c("",""),
+           "Cold" = c("",""))
   })
     
     output$coffeeno <- renderUI({
-      selectInput("cn","Choose which type of drink you want (coffee or not):",cofno())
+      if(input$coffee=="Starbucks"){
+        selectInput("cn","Choose which type of drink you want (coffee or not):",cofnos())
+      } else if(input$coffee=="Dunkin"){
+      selectInput("cn","Choose which type of drink you want (coffee or not):",cofnod())
+      } else{
+      selectInput("cn","You need to select a coffee company.",cofnoo())
+      }
     })
 
   
