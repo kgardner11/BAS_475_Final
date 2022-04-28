@@ -7,6 +7,9 @@ library(plotly)
 library(dygraphs)
 library(tidyverse)
 library(fpp3)
+
+
+# File Path ---------------------------------------------------------------
 file_path1 <- "multiTimeline (10).csv"
 s_trends <- read.csv(file_path1, skip = 2)
 names(s_trends) <- c("Month", "Starbucks")
@@ -18,6 +21,8 @@ names(d_trends) <- c("Month", "Dunkin")
 d_trends$Month <- yearmonth(d_trends$Month)
 d_trends <- tsibble(d_trends)
 
+
+# Nutrition Data ----------------------------------------------------------
 SB.Americano <- c("Caffè Americano")
 SB_Americano <- as.data.frame(SB.Americano)
 SB_Americano$Calories <- c(15)
@@ -898,6 +903,7 @@ SB_Creme_Frappe$Protein_g <- c(7,4,5,5,7,6,5,6)
 SB_Creme_Frappe$Caffeine_mg <- c(15,10,0,40,15,70,0,0)
 
 
+# App ---------------------------------------------------------------------
 ui <- dashboardPage(
   dashboardHeader(title = "Popular Coffee Shops"),
   skin = "black",
@@ -905,8 +911,10 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Which Coffee Company?",tabName="dashboard",icon=icon("dashboard")),
       menuItem("Plots",tabName="c1",icon=icon("th")),
-      menuItem("Simple Forecasting",tabName="c2",icon=icon("question")),
-      menuItem("Nutrition Information",tabName="c3",icon=icon("circle"))
+      menuItem("Simple Models",tabName="c2",icon=icon("circle")),
+      menuItem("Exponential Smoothing",tabName="c3",icon=icon("circle")),
+      menuItem("ARIMA",tabname="c4",icon=icon("circle")),
+      menuItem("Nutrition Information",tabName="c5",icon=icon("question"))
     )
   ),
   dashboardBody(
@@ -939,12 +947,26 @@ ui <- dashboardPage(
       ),
       tabItem(tabName="c2",
               h1("Simple Forecasting"),
+              selectInput("simp","Which Forecasting Model(s) Would You Like to View?",choices=c("Naive","Seasonal Naive","Mean","Drift","All of the Above")),
               sliderInput("h","How Many Years Do You Want to Forecast?", min=1, max=10,value=1),
               plotOutput("forecast"),
               verbatimTextOutput("forc")
       ),
       tabItem(tabName="c3",
+              h1("Exponential Smoothing"),
+              selectInput("expp","Which Exponential Smoothing Model Would You Like to View?", choices=c("Holt","Holt-Winters")),
+              sliderInput("exph", "How Many Years Do You Want to Forecast?",min=1,max=10,value=1),
+              plotOutput("expfor"),
+              verbatimTextOutput("expint")
+      ),
+      tabItem(tabName="c4",
+              h1("ARIMA"),
+              h3("Next Stuff Here....")
+              
+      ),
+      tabItem(tabName="c5",
               h1("Nutrition Information"),
+              h3("You're probably in the mood for a drink by now... Before deciding what to order, let's look at the nutrition information for all the menu items!"),
               selectInput("hotcold",("What temperature do you want your drink to be?"),
                           choices= c("","Hot","Cold","Frozen"),
                           selected = ""),
@@ -1019,13 +1041,62 @@ server <- function(input, output) {
   hh <- reactive({ input$h * 12})
   
   output$forecast <- renderPlot({
-    if(input$coffee == "Starbucks"){
+    if(input$coffee == "Starbucks" & input$simp == "Mean"){
       train <- s_trends %>% 
         filter_index("2004 Jan" ~ "2022 Mar") 
       ss_fit <- train %>% model(
-        "Mean" = MEAN(Starbucks),
-        "Naive" = NAIVE(Starbucks),
-        "Seasonal Naive" = SNAIVE(Starbucks)
+        "Mean" = MEAN(Starbucks))
+      ss_fc <- ss_fit %>% forecast(h=hh())
+      ss_fc %>% 
+        autoplot(train,level=NULL)+
+        autolayer(
+          filter_index(s_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Starbucks Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))}
+    else if(input$coffee=="Starbucks" & input$simp == "Naive"){
+      train <- s_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      ss_fit <- train %>% model(
+        "Naive" = NAIVE(Starbucks))
+      ss_fc <- ss_fit %>% forecast(h=hh())
+      ss_fc %>% 
+        autoplot(train,level=NULL)+
+        autolayer(
+          filter_index(s_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Starbucks Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))} 
+    else if(input$coffee == "Starbucks" & input$simp == "Seasonal Naive"){
+      train <- s_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      ss_fit <- train %>% model(
+        "Seasonal Naive" = SNAIVE(Starbucks))
+      ss_fc <- ss_fit %>% forecast(h=hh())
+      ss_fc %>% 
+        autoplot(train,level=NULL)+
+        autolayer(
+          filter_index(s_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Starbucks Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))}
+    else if(input$coffee == "Starbucks" & input$simp == "Drift"){
+      train <- s_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      ss_fit <- train %>% model(
+        "Drift" = NAIVE(Starbucks~drift())
       )
       ss_fc <- ss_fit %>% forecast(h=hh())
       ss_fc %>% 
@@ -1039,13 +1110,104 @@ server <- function(input, output) {
           title = "Forecasts for Monthly Starbucks Searches"
         ) +
         guides(colour= guide_legend(title="Forecast"))}
-    else if (input$coffee == "Dunkin"){
+    else if(input$coffee=="Starbucks" & input$simp == "All of the Above"){
+      train <- s_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      ss_fit <- train %>% model(
+        "Mean" = MEAN(Starbucks),
+        "Naive" = NAIVE(Starbucks),
+        "Seasonal Naive" = SNAIVE(Starbucks),
+        "Drift" = NAIVE(Starbucks~drift())
+      )
+      ss_fc <- ss_fit %>% forecast(h=hh())
+      ss_fc %>% 
+        autoplot(train,level=NULL)+
+        autolayer(
+          filter_index(s_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Starbucks Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))}
+    else if (input$coffee == "Dunkin" & input$simp == "Mean"){
+      train2 <- d_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      dd_fit <- train2 %>% model(
+        "Mean" = MEAN(Dunkin))
+      dd_fc <- dd_fit %>% forecast(h=hh())
+      dd_fc %>% 
+        autoplot(train2,level=NULL)+
+        autolayer(
+          filter_index(d_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Dunkin Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))}
+    else if(input$coffee == "Dunkin" & input$simp == "Naive"){
+      train2 <- d_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      dd_fit <- train2 %>% model(
+        "Naive" = NAIVE(Dunkin))
+      dd_fc <- dd_fit %>% forecast(h=hh())
+      dd_fc %>% 
+        autoplot(train2,level=NULL)+
+        autolayer(
+          filter_index(d_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Dunkin Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))}
+    else if(input$coffee == "Dunkin" & input$simp == "Seasonal Naive"){
+      train2 <- d_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      dd_fit <- train2 %>% model(
+        "Seasonal Naive" = SNAIVE(Dunkin))
+      dd_fc <- dd_fit %>% forecast(h=hh())
+      dd_fc %>% 
+        autoplot(train2,level=NULL)+
+        autolayer(
+          filter_index(d_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Dunkin Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))}
+    else if(input$coffee == "Dunkin" & input$simp == "Drift"){
+      train2 <- d_trends %>% 
+        filter_index("2004 Jan" ~ "2022 Mar") 
+      dd_fit <- train2 %>% model(
+        "Drift" = NAIVE(Dunkin~drift())
+      )
+      dd_fc <- dd_fit %>% forecast(h=hh())
+      dd_fc %>% 
+        autoplot(train2,level=NULL)+
+        autolayer(
+          filter_index(d_trends, "2004 Jan"~"2022 Mar"),
+          colour="black"
+        ) +
+        labs(
+          y = "Interest",
+          title = "Forecasts for Monthly Dunkin Searches"
+        ) +
+        guides(colour= guide_legend(title="Forecast"))}
+    else if(input$coffee == "Dunkin" & input$simp == "All of the Above"){
       train2 <- d_trends %>% 
         filter_index("2004 Jan" ~ "2022 Mar") 
       dd_fit <- train2 %>% model(
         "Mean" = MEAN(Dunkin),
         "Naive" = NAIVE(Dunkin),
-        "Seasonal Naive" = SNAIVE(Dunkin)
+        "Seasonal Naive" = SNAIVE(Dunkin),
+        "Drift" = NAIVE(Dunkin~drift())
       )
       dd_fc <- dd_fit %>% forecast(h=hh())
       dd_fc %>% 
@@ -1068,9 +1230,68 @@ server <- function(input, output) {
     if(input$coffee== ""){
       paste("There is no forecasting plot to disply because you have not chosen a company.")}
     else{
-      paste("These three simple models are used mostly as a benchmark for more advanced forecasting. The mean model forecasts all future values to be equal to", "the average of the historical data. The naive model forecasts all future values to be equal to the most recent observed value. The seasonal naive", "mode forecasts all future values to follow the exact same seasonal pattern as the most reason season. While one may argue that it is unecessary", "to even look at these models since they are unlikely to be true to the future, it is important to understand that they still hold importance…", "After all, all models are wrong, but some are useful!",sep="\n")
+      paste("These simple models are used mostly as a benchmark for more advanced forecasting. The mean model forecasts all future values to be equal to", "the average of the historical data. The naive model forecasts all future values to be equal to the most recent observed value. The seasonal naive", "model forecasts all future values to follow the exact same seasonal pattern as the most reason season. The drift model is a variation in the drift", "model with the amount of change over time (or drift) is the average change seen in the original data. While one may argue that it is unecessary", "to even look at these models since they are unlikely to be true to the future, it is important to understand that they still hold importance…", "After all, all models are wrong, but some are useful!",sep="\n")
     }
   })
+  
+  output$expint <- renderText({
+    if(input$coffee == "") {
+      paste("There is no forecasting plot to display because you have not chosen a company.")}
+    else{
+      paste("The exponential smoothing method of forecasting uses weight averages of past observations, with the weights decaying exponentially as the", "observations get further in the past. Holt's linear method produces forecasts that display a constant trend indefinitely into the future. This trend", "can be damped to a flat line some time in the future. Methods that include a damped trend have been proven to be very successful. Holt-Winter is","used to capture seasonality as well as trend. The additive method is preferred when the seasonal variations are roughly constant through the series,", "and the multiplicative method is preferred when the seasonal variations change proportional to the level of the series.",sep="\n")
+    }
+    })
+    
+  hh2 <- reactive({ input$exph * 12})
+  
+  output$expfor <- renderPlot({
+    if(input$coffee == "Starbucks" & input$expp == "Holt"){
+    s_trends %>%
+      model(
+        "Holt's method" = ETS(Starbucks ~ error("A") +
+                                trend("A") + season("N")),
+        "Damped Holt's method" = ETS(Starbucks ~ error("A") +
+                                       trend("Ad", phi = 0.9) + season("N"))
+      ) %>%
+      forecast(h = hh2()) %>%
+      autoplot(s_trends, level = NULL) +
+      labs(title = "Starbucks: Holt") +
+      guides(colour = guide_legend(title = "Forecast"))}
+    else if(input$coffee == "Dunkin" & input$expp == "Holt"){
+      d_trends %>% 
+        model(
+          "Holt's method" = ETS(Dunkin ~ error("A") +
+                                  trend("A") + season("N")),
+          "Damped Holt's method" = ETS(Dunkin ~ error("A") + 
+                                         trend("Ad", phi = 0.9) + season("N"))
+        ) %>% 
+        forecast(h=hh2()) %>% 
+        autoplot(d_trends, level= NULL) + 
+        labs(title= "Dunkin: Holt") +
+        guides(colour = guide_legend(title = "Forecast"))}
+    else if(input$coffee == "Starbucks" & input$expp == "Holt-Winters"){
+      s_trends %>%
+        model(
+          additive = ETS(Starbucks ~ error("A") + trend("A") +
+                           season("A")),
+          multiplicative = ETS(Starbucks ~ error("M") + trend("A") +
+                                 season("M"))
+        ) %>% forecast(h=hh2()) %>% 
+        autoplot(s_trends,level=NULL) + 
+        labs(title = "Starbucks: Holt-Winters") +
+        guides(colour=guide_legend(title="Forecast"))
+    } else if(input$coffee == "Dunkin" & input$expp == "Holt-Winters"){
+      d_trends %>%
+        model(
+          additive = ETS(Dunkin ~ error("A") + trend("A") +
+                           season("A")),
+          multiplicative = ETS(Dunkin ~ error("M") + trend("A") +
+                                 season("M"))
+        ) %>% forecast(h=hh2()) %>% 
+        autoplot(d_trends,level=NULL) + 
+        labs(title = "Dunkin: Holt-Winters") +
+        guides(colour=guide_legend(title="Forecast"))
+    } })
   
   cofnos <- reactive({
     switch(input$hotcold,
