@@ -21,6 +21,19 @@ names(d_trends) <- c("Month", "Dunkin")
 d_trends$Month <- yearmonth(d_trends$Month)
 d_trends <- tsibble(d_trends)
 
+# Differencing Data for Arima ---------------------------------------------
+s_trends %>% 
+  features(Starbucks, unitroot_nsdiffs)
+s_trend_seasonal <- 
+  s_trends %>% 
+  mutate(Starbucks =difference(Starbucks,12))
+s_trend_seasonal %>% features(Starbucks,unitroot_ndiffs)
+d_trends %>% 
+  features(Dunkin, unitroot_nsdiffs)
+d_trend_seasonal <- 
+  d_trends %>% 
+  mutate(Dunkin =difference(Dunkin,12))
+d_trend_seasonal %>% features(Dunkin,unitroot_ndiffs)
 
 # Nutrition Data ----------------------------------------------------------
 SB.Americano <- c("Caffè Americano")
@@ -913,7 +926,7 @@ ui <- dashboardPage(
       menuItem("Plots",tabName="c1",icon=icon("th")),
       menuItem("Simple Models",tabName="c2",icon=icon("circle")),
       menuItem("Exponential Smoothing",tabName="c3",icon=icon("circle")),
-      menuItem("ARIMA",tabname="c4",icon=icon("circle")),
+      menuItem("ARIMA",tabName="c4",icon=icon("circle")),
       menuItem("Nutrition Information",tabName="c5",icon=icon("question"))
     )
   ),
@@ -961,8 +974,10 @@ ui <- dashboardPage(
       ),
       tabItem(tabName="c4",
               h1("ARIMA"),
-              h3("Next Stuff Here....")
-              
+              selectInput("arimatype","Do You Want Manually Selected or Auto Selected Parameters?",choices=c("Manually","Auto")),
+              uiOutput("man"),
+              sliderInput("arh","How Many Years Do You Want to Forecast?",min=1,max=10,value=1),
+              plotOutput("arimaplot")
       ),
       tabItem(tabName="c5",
               h1("Nutrition Information"),
@@ -1512,9 +1527,27 @@ server <- function(input, output) {
         data=DD_Coolata
       }
     })
+
+    hh3 <- reactive({ input$arh * 12})
     
+    output$man <- renderUI({
+      if(input$arimatype == "Manually"){
+        sliderInput("p","What Order Would You Like to Observe for the Autoregressive Part? Note: The degree of first differencing involved is 1, and the order of the moving average part is 0.",min=0,max=4,value=1)
+      }
+    })
     
-    }
+    output$arimaplot <- renderPlot({
+      if(input$coffee== "Starbucks" & input$arimatype == "Auto"){
+      s_trend_seasonal %>% model(ARIMA(Starbucks)) %>% forecast(h=hh3()) %>% autoplot(s_trend_seasonal)}
+      else if(input$coffee=="Dunkin" & input$arimatype == "Auto"){
+      d_trend_seasonal %>% model(ARIMA(Dunkin)) %>% forecast(h=hh3()) %>% autoplot(d_trend_seasonal)} 
+      else if(input$coffee== "Starbucks" & input$arimatype == "Manually"){
+      s_trend_seasonal %>% model(ARIMA(Starbucks ~ pdq(input$p,1,0))) %>% forecast(h=hh3()) %>% autoplot()}
+      else if(input$coffee == "Dunkin" & input$arimatype == "Manually"){
+      d_trend_seasonal %>% model(ARIMA(Dunkin ~ pdq(input$p,1,0))) %>% forecast(h=hh3()) %>% autoplot()}
+    })
+  
+}
     
 
 shinyApp(ui, server)
