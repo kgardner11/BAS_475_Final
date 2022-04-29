@@ -939,7 +939,10 @@ ui <- dashboardPage(
               h2("Instructions"),
               strong("First, select the coffee shop you want to observe: Starbucks or Dunkin’. As you select one, the company logo will appear and the background will change to a color that reflects your choice."),
               strong("Second, go to the Plot tab. This is where you will observe Feature #1. You can select between four types of plots to show: full-time series, seasonality, autocorrelation, or decomposition. The plot will appear along with the interpretation. If you did not select a company, no plot will appear and you will see a message requesting that you do so."),
-              strong("Third, go to the Simple Forecasting tab. This is where you will observe Feature #2. You can use the slider to select the number of years you want to forecast into the future, with choices being 1-10. As you select one, the plot will change to show three forecasting models: the mean model, naive model, and seasonal naive model. An explanation will appear underneath the plot, as well. If you did not select a company, there will be no plot and you will see a message requesting that you do so. "),
+              strong("Third, go to the Simple Models tab. This is where you will observe Feature #2. Begin by selecting the type of model you want to observe: naive, mean, seasonal naive, drift, or all at once. You can then use the slider to select the number of years you want to forecast into the future, with choices being 1-10. As you select one, the plot will change. An explanation will appear underneath the plot, as well. If you did not select a company, there will be no plot and you will see a message requesting that you do so. "),
+              strong("Fourth, go to the Exponential Smoothing tab. This is where you will observe Feature #3. Begin by selecting which type of exponsential smoothing model you want to observe: Holt or Holt-Winters. You can then use the slider to select the number of years you want to forecast, and the plot will change accordingly. If you did not select a company, no plot will appear."),
+              strong("Fifth, go to the ARIMA tab. This is where you will observe Feature #4. Begin by selecting whether you want your ARIMA model to use manually selected or auto selected parameters. If you choose manually selected, you then can decide the order for the autoregressive part. You can choose 0, 1, 2, 3, or 4.  You can then use the slider to select the number of years you want to forecast, and the plot will change. If you did not select a company, no plot will appear."),
+              strong("Sixth, go the Nutrition Information tab. This is where you can decide what to order! Begin by deciding whether you want a hot, cold, or frozen drink. Then you can choose from all the options at your chosen company, and a table with the nutrition information will appear. If you did not choose a company, you will be unable to select a drink."),
               selectInput("coffee",h3("Select a Coffee Company"),
                           choices= c("","Starbucks","Dunkin"),
                           selected = ""),
@@ -959,7 +962,7 @@ ui <- dashboardPage(
               verbatimTextOutput("interpret")
       ),
       tabItem(tabName="c2",
-              h1("Simple Forecasting"),
+              h1("Simple Models"),
               selectInput("simp","Which Forecasting Model(s) Would You Like to View?",choices=c("Naive","Seasonal Naive","Mean","Drift","All of the Above")),
               sliderInput("h","How Many Years Do You Want to Forecast?", min=1, max=10,value=1),
               plotOutput("forecast"),
@@ -977,7 +980,8 @@ ui <- dashboardPage(
               selectInput("arimatype","Do You Want Manually Selected or Auto Selected Parameters?",choices=c("Manually","Auto")),
               uiOutput("man"),
               sliderInput("arh","How Many Years Do You Want to Forecast?",min=1,max=10,value=1),
-              plotOutput("arimaplot")
+              plotOutput("arimaplot"),
+              verbatimTextOutput("ariint")
       ),
       tabItem(tabName="c5",
               h1("Nutrition Information"),
@@ -1256,6 +1260,15 @@ server <- function(input, output) {
       paste("The exponential smoothing method of forecasting uses weight averages of past observations, with the weights decaying exponentially as the", "observations get further in the past. Holt's linear method produces forecasts that display a constant trend indefinitely into the future. This trend", "can be damped to a flat line some time in the future. Methods that include a damped trend have been proven to be very successful. Holt-Winter is","used to capture seasonality as well as trend. The additive method is preferred when the seasonal variations are roughly constant through the series,", "and the multiplicative method is preferred when the seasonal variations change proportional to the level of the series.",sep="\n")
     }
     })
+  
+  output$ariint <- renderText({
+    if(input$coffee == ""){
+      paste("There is no forecasting plot to display because you have not chosen a company.")}
+    else{
+      paste("The ARIMA models aims to describe autocorrelations in data. This data set had to undergo seasonal differencing because it was not","stationary. The ARIMA model has three parameters: the autoregressive part, the differencing part, and the moving average part.",sep="\n")
+    }
+    })
+  
     
   hh2 <- reactive({ input$exph * 12})
   
